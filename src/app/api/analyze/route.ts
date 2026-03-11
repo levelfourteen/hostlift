@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: LISTING_ANALYSIS_SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -68,10 +68,15 @@ export async function POST(request: NextRequest) {
     try {
       // Strip any markdown code fences if present
       const cleaned = content
-        .replace(/^```json?\s*/i, "")
-        .replace(/\s*```$/i, "")
+        .replace(/^```json?\s*\n?/i, "")
+        .replace(/\n?\s*```\s*$/i, "")
         .trim();
-      result = JSON.parse(cleaned);
+      // Extract JSON object if surrounded by other text
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("No JSON object found in response");
+      }
+      result = JSON.parse(jsonMatch[0]);
     } catch {
       console.error("Failed to parse Claude response:", content);
       return NextResponse.json(
